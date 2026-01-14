@@ -3,7 +3,7 @@ use connector::Connection;
 use lru::LruCache;
 use once_cell::sync::Lazy;
 use schema::QuerySchemaRef;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::{
     sync::{
         mpsc::{channel, Sender},
@@ -51,7 +51,9 @@ impl Default for TransactionActorManager {
 impl TransactionActorManager {
     pub fn new() -> Self {
         let clients = Arc::new(RwLock::new(HashMap::new()));
-        let closed_txs = Arc::new(RwLock::new(LruCache::new(*CLOSED_TX_CACHE_SIZE)));
+        let closed_txs = Arc::new(RwLock::new(LruCache::new(
+            NonZeroUsize::new(*CLOSED_TX_CACHE_SIZE).expect("CLOSED_TX_CACHE_SIZE must be > 0"),
+        )));
 
         let (send_done, rx) = channel(CHANNEL_SIZE);
         let handle = spawn_client_list_clear_actor(clients.clone(), closed_txs.clone(), rx);
